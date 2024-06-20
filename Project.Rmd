@@ -1,18 +1,27 @@
 ---
-title: "Final Project"
+title: "Final Project Basic Outline"
+author: "Omer Kandemir"
 output: html_notebook
 ---
 
-Guiding research question: In the state of Washington, are people from traditionally democratic counties (counties that have voted democrat in a row for the past 5 presidential elections) more likely to own EVs (electric vehicles) as opposed to traditionally republican counties (counties that have voted republican in a row for the past 5 presidential elections)? How has the rate of EVs for democratic counties changed over time as opposed to republican counties (have people from traditionally democratic counties adopted EVs at a faster rate as opposed to traditionally republican counties)?
+## Research Question 
 
-These are the guiding research questions I want to answer. To answer the first question, we will examine the Electric Vehicle Population Data CSV file which shows the Battery Electric Vehicles (BEVs) and Plug-in Hybrid Electric Vehicles (PHEVs) that are currently registered through Washington State Department of Licensing (DOL). 
+In the state of Washington, are people from traditionally democratic counties (counties that have voted democrat in a row for the past 5 presidential elections) more likely to own EVs (electric vehicles) as opposed to traditionally republican counties (counties that have voted republican in a row for the past 5 presidential elections) and how has the rate of EVs for traditionally democratic counties changed over time as opposed to traditionally republican counties (have people from traditionally democratic counties adopted EVs at a faster rate as opposed to traditionally republican counties)?
+
+This research question is interesting to me because it explores the intersection between political affiliation and environmental action. My intuition tells me that democratic regions might be more inclined towards adoption green technologies like EVs due to their policy preferences and environmental concerns. However, by looking at the actual data, we can either validate or challenge this assumption which would give us a clear picture about how political affiliations might impact whether someone chooses to own an EV.
+
+To answer the first part of the question, we will examine the Electric Vehicle Population Data CSV file which shows the Battery Electric Vehicles (BEVs) and Plug-in Hybrid Electric Vehicles (PHEVs) that are currently registered through Washington State Department of Licensing (DOL). 
 
 I have also created two auxiliary CSV files, which are democratic_counties and republican_counties. These define what the traditionally democratic and republican counties are with their populations respectively. The reason why this is needed is because to see if there is a higher rate of EVs in traditionally democratic counties, which I will call "blue counties" for short, in comparison to traditionally republican counties, which I will call "red counties" for short, we must calculate the EVs per capita for each of these counties. And to calculate EVs per capita, we need the populations for each county, as the equation for EVs per capita for a county would be the total EVs in that county divided by the population of that county. 
 
 Therefore, I had to define which counties in the state of Washington are red, and which are blue with their respective populations because the Electric Vehicle Population Data did not have this information, therefore I had to collect it and compile it on my own into its own data sets to help me answer my research question.
 
-We will first answer the first question. When it comes to the second question, we will answer that later down below. 
+To answer the second part of the question, we will use the Electric Vehicle Population Size History By County data set to do so. This data set shows the number of vehicles that were registered by Washington State Department of Licensing (DOL) each month. The data is separated by county for passenger vehicles and trucks. We'll focus on data from January 31, 2017, and April 30, 2024, for counties in Washington state. We'll filter the data to include only passenger vehicles and calculate the total number of EVs for each county at these two points in time. So basically we will filter the data, calculate the EVs per capita for both dates, and determine the percent increase in EV ownership for each county.
 
+
+## Data Processing 
+
+#### Data Intake
 
 ```{r} 
 library(tidyverse)
@@ -20,15 +29,21 @@ library(tidyverse)
 ev_population <- read_csv("Electric_Vehicle_Population_Data.csv")
 democratic_counties <- read_csv("Traditionally Democratic Counties in the State of Washington - Sheet1.csv")
 republican_counties <- read_csv("Traditionally Republican Counties in the State of Washington - Sheet1.csv")
+ev_population_history <- read_csv("Electric_Vehicle_Population_Size_History_By_County.csv")
 
 head(democratic_counties)
 head(republican_counties)
 head(ev_population)
+head(ev_population_history)
 ```
 
 We are using the head() function to see what the basic structure is for each CSV file. Like I said, the data sets corresponding to democratic_counties and republican_counties have just two columns, which are the county name and its population. Each case or row represents a county we want to study. 
 
 Now when it comes to the actual data set, which is the Electric Vehicle Population Data, there is a lot of information we actually do not need. There are 17 columns, and many of the columns actually does not matter. The only column that matters is titled County, as that tells us what county this EV is in. Therefore, to calculate the total number of EVs per county, we will just add up the total cases for every county we want to study. Therefore, all other columns in this data set are of no use, at least for the purposes of answering our research question.
+
+When it comes to the second data set of interested, which is Electric Vehicle Population Size History by County, there are 10 columns in this data set. We are interested in Date (we are only looking for January 31 2017 and April 30 2024), County (as we will only group by and look for our defined red and blue counties), State (as we are only interested in WA), Vehicle Primary Use (we only care about passenger vehicles), and Electric Vehicle (EV) Total (as this will be used to calculate the EVs per capita and the percentage increase / decrease). All other columns are of no use to us.
+
+#### Data Wrangling to answer the first part of our research question 
 
 ```{r}
 ev_by_county <- ev_population %>%
@@ -56,6 +71,7 @@ democratic_ev_data
 republican_ev_data
 
 ```
+
 First, we need to count the number of EVs in each county. The ev_population dataset has information about registered electric vehicles in Washington state, including which county each vehicle is in. To find the total number of electric vehicles in each county, we group the data by county using group_by(County) and then count the number of rows for each county with summarise(TotalEVs = n()). This gives us a new data frame called ev_by_county with the total number of EVs in each county.
 
 Next, we need to combine this EV data with the blue counties dataset. We have two separate datasets: one with the total number of EVs by county (ev_by_county) and another with the traditionally Democratic counties and their populations (democratic_counties). To combine these, we first rename the County Name column to County so it matches the column name in ev_by_county. Then, we use a left join to merge democratic_counties with ev_by_county based on the County column. This makes sure all counties in democratic_counties are included, even if they have zero EVs. We also use mutate(TotalEVs = replace_na(TotalEVs, 0)) to fill in any missing values in the TotalEVs column with 0, for counties that don’t have any registered EVs.
@@ -64,6 +80,7 @@ We do the same thing for the red counties. Like with the blue counties, we have 
 
 Finally, we calculate the EVs per capita for both blue and red counties. We now have the total number of EVs and the population for each county. We calculate the EVs per capita by dividing the total number of EVs by the population for each county. We do this using mutate(EVsPerCapita = TotalEVs / Population), which adds a new column EVsPerCapita to each dataset. 
 
+## Data Visualization to answer the first part of our research question
 
 ```{r}
 combined_ev_data <- bind_rows(
@@ -82,7 +99,15 @@ ggplot(combined_ev_data, aes(x = Population, y = EVsPerCapita, color = Political
   scale_color_manual(values = c("Democratic" = "blue", "Republican" = "red")) +
   labs(title = "EVs per Capita vs. Population by County", x = "Population", y = "EVs per Capita") +
   theme_minimal()
+
+average_evs_per_capita <- combined_ev_data %>%
+  group_by(PoliticalAffiliation) %>%
+  summarise(AverageEVsPerCapita = mean(EVsPerCapita, na.rm = TRUE))
+
+average_evs_per_capita
+
 ```
+
 Now we combine the data sets for plotting. We use bind_rows to stack the democratic_ev_data and republican_ev_data data sets and add a PoliticalAffiliation column to determine whether the counties are Democratic or Republican. 
 
 Next, we create a box plot to compare EVs per capita between Democratic and Republican counties using ggplot with combined_ev_data. We set x to PoliticalAffiliation and y to EVsPerCapita. The boxplot shows the EV ownership rates per capita and their distribution.
@@ -93,31 +118,11 @@ We also create a scatter plot with population on the x-axis and EVs per capita o
 
 When it comes to the scatter plot, we can see that every blue county has a higher EV per capita than every single red county. It can be also said that the red counties generally have a lower population, so we could maybe say that people in counties with larger populations are more likely to own an EV. However, when it comes to blue counties that is not necessarily true, as the blue county with the highest EV per capita is one of the counties with the lowest populations.
 
-
-```{r}
-average_evs_per_capita <- combined_ev_data %>%
-  group_by(PoliticalAffiliation) %>%
-  summarise(AverageEVsPerCapita = mean(EVsPerCapita, na.rm = TRUE))
-
-average_evs_per_capita
-
-```
 The results show that blue counties have an average of about 0.0316 EVs per person, meaning for every 100 people, there are roughly 3.16 electric vehicles. On the other hand, red counties have an average of about 0.0061 EVs per person, meaning for every 100 people, there are roughly 0.61 electric vehicles. 
 
 So, we have answered the first part of our research question. Blue counties indeed have a much higher EV per capita, by around a factor of 5! Therefore we can say that at least in the state of Washington a person in a blue county is much more likely to own an EV than a person in a red county.
 
-Now, let's answer the second question, which we will use the Electric Vehicle Population Size History By County data set to do so. This data set shows the number of vehicles that were registered by Washington State Department of Licensing (DOL) each month. The data is separated by county for passenger vehicles and trucks. We'll focus on data from January 31, 2017, and April 30, 2024, for counties in Washington state. We'll filter the data to include only passenger vehicles and calculate the total number of EVs for each county at these two points in time.
-
-So basically we will filter the data, calculate the EVs per capita for both dates, and determine the percent increase in EV ownership for each county.
-
-
-```{r}
-
-ev_population_history <- read_csv("Electric_Vehicle_Population_Size_History_By_County.csv")
-
-head(ev_population_history)
-```
-There are 10 columns in this data set. We are interested in Date (we are only looking for Jan 31 2017 and April 30 2024), County (as we will only group by and look for our defined red and blue counties), State (as we are only interested in WA), Vehicle Primary Use (we only care about passenger vehicles), and Electric Vehicle (EV) Total (as this will be used to calculate the EVs per capita and the percentage increase / decrease). All other columns are of no use to us.
+#### Data Wrangling to answer the second part of our research question 
 
 ```{r}
 ev_population_history_filtered <- ev_population_history %>%
@@ -149,8 +154,6 @@ ev_growth_data <- ev_totals_spread %>%
 head(ev_growth_data)
 ```
 
-
-
 First, we filter the ev_population_history dataset to only include passenger vehicles in Washington state and the data from the dates we're interested in (January 31, 2017, and April 30, 2024). We then use mutate to change the Date column into a proper date format.
 
 Next, we group the filtered data by County and Date, then sum up the total number of EVs for each group. This gives us a data frame called ev_totals_by_county with the total EVs for each county on those dates. We then spread this data into separate columns for each date using the spread function, creating a new data frame called ev_totals_spread with columns EVs_2017 and EVs_2024, representing the total number of EVs in each county for 2017 and 2024.
@@ -159,6 +162,7 @@ To see how EV ownership has grown, we combine this EV data with population data 
 
 We then merge the ev_totals_spread data with population_data by the County column, creating a new data frame called ev_growth_data. This data frame includes the total EVs and population for each county. Finally, we add new columns to calculate the EVs per capita for 2017 (EVsPerCapita_2017) and 2024 (EVsPerCapita_2024), and the percent increase in EVs per capita (PercentIncrease) from 2017 to 2024.
 
+## Data Visualization to answer the first part of our research question
 
 ```{r}
 average_percent_increase <- ev_growth_data %>%
@@ -224,13 +228,13 @@ ggplot(ev_growth_data, aes(x = Population, y = PercentIncrease, color = Politica
 ```
 We can't really say anything when it comes to this graph; there is not enough data to suggest that population plays a big impact on the percent increase. However, it is still interesting to note that not every red county had a higher percent increase than even blue county, some blue counties indeed had a higher percent increase than a small number of red counties.
 
-Final Analysis and Answer to the Research Questions
+## Conclusion
 
-Question 1: Are people from traditionally Democratic counties (blue counties) in Washington state more likely to own EVs compared to traditionally Republican counties (red counties)?
+First part of our research question: Are people from traditionally Democratic counties (blue counties) in Washington state more likely to own EVs compared to traditionally Republican counties (red counties)?
 
 To answer this, we examined the EV ownership rates (EVs per capita) for both blue and red counties. The results show that blue counties have an average of about 0.0316 EVs per person, meaning for every 100 people, there are roughly 3.16 electric vehicles. On the other hand, red counties have an average of about 0.0061 EVs per person, meaning for every 100 people, there are roughly 0.61 electric vehicles. Therefore, blue counties indeed have a much higher EV per capita, by around a factor of 5. This means that in the state of Washington, a person in a blue county is much more likely to own an EV than a person in a red county.
 
-Question 2: How has the rate of EV adoption changed over time for blue counties compared to red counties? Have people from traditionally Democratic counties adopted EVs at a faster rate compared to traditionally Republican counties?
+Second part of our research question: How has the rate of EV adoption changed over time for blue counties compared to red counties? Have people from traditionally Democratic counties adopted EVs at a faster rate compared to traditionally Republican counties?
 
 To answer this, we analyzed the EV population data from January 31, 2017, and April 30, 2024. By comparing the aggregated totals of EVs and populations for blue and red counties, we calculated the percent increase in EVs per capita for both groups. The results show that blue counties had a percent increase of 662%, while red counties had a percent increase of 849% in total. This indicates that, overall, red counties had a higher adoption rate of EVs compared to their population than blue counties.
 
