@@ -1,5 +1,5 @@
 ---
-title: "Final project for Omer Kandemir"
+title: "Final Project"
 output: html_notebook
 ---
 
